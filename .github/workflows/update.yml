@@ -1,8 +1,8 @@
-name: Auto-Update Malware Signatures
+name: Hourly Public Feed Sync
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs automatically every day at midnight UTC
+    - cron: '0 * * * *' # Runs automatically at the top of every hour
   workflow_dispatch:     # Allows you to trigger it manually anytime from GitHub
 
 jobs:
@@ -10,11 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Fetch latest hashes and update file
+      - name: Fetch public hash list
         run: |
-          # Replace the URL below with any public raw text list of hashes you want to sync from
+          # This pulls directly from a public raw text feed with no login or API key required
           curl -s "https://raw.githubusercontent.com/romainmarcoux/malicious-hash/main/full-hash-sha1-aa.txt" > Signatures.txt
 
       - name: Commit and push changes
@@ -22,6 +22,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add Signatures.txt
-          git commit -m "Automated signature database refresh" || echo "No changes to commit"
-          git push
-          
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Hourly automated signature refresh" && git push)
