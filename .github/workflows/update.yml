@@ -2,8 +2,8 @@ name: Hourly Public Feed Sync
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Runs automatically every hour
-  workflow_dispatch:      # Allows manual trigger anytime from GitHub UI
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -47,20 +47,21 @@ jobs:
           for url in urls:
               try:
                   req = urllib.request.Request(url, headers=headers)
-                  with urllib.request.urlopen(req, timeout=15) as resp:
+                  with urllib.request.urlopen(req, timeout=10) as resp:
                       content = resp.read().decode('utf-8', errors='ignore')
                       for line in content.splitlines():
                           line = line.strip().lower()
                           if md5_pattern.match(line):
                               hashes.add(line)
               except Exception as e:
-                  print(f'Notice: Skipping {url} due to error: {e}')
+                  print(f'Warning: Feed unreachable ({url}): {e}')
 
-          print(f'Successfully collected {len(hashes)} unique MD5 hashes.')
+          print(f'Total valid hashes collected: {len(hashes)}')
 
-          with open('Signatures.txt', 'w') as f:
-              for h in sorted(hashes):
-                  f.write(h + '\n')
+          if len(hashes) > 2:
+              with open('Signatures.txt', 'w') as f:
+                  for h in sorted(hashes):
+                      f.write(h + '\n')
           "
 
       - name: Commit and push changes
@@ -72,11 +73,8 @@ jobs:
 
           if ! git diff --staged --quiet; then
             git commit -m "Hourly multi-feed signature refresh"
-            
-            # Fetch remote changes first to avoid rejected push conflicts
             git pull --rebase origin main
-            
             git push
           else
-            echo "No signature updates detected. Skipping commit."
+            echo "No changes detected."
           fi
