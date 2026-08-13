@@ -2,8 +2,8 @@ name: Hourly Public Feed Sync
 
 on:
   schedule:
-    - cron: '0 * * * *' # Runs automatically at the top of every hour
-  workflow_dispatch:     # Manual trigger button in GitHub Actions
+    - cron: '0 * * * *'  # Runs automatically every hour
+  workflow_dispatch:      # Allows manual run from GitHub UI
 
 permissions:
   contents: write
@@ -17,34 +17,36 @@ jobs:
 
       - name: Fetch and combine MD5 threat feeds
         run: |
-          # 1. Create a clean temporary workspace file
+          # 1. Create temporary workspace file
           touch temp_sigs.txt
 
-          # Source 1: MalwareBazaar Recent MD5 Feed (abuse.ch)
-          curl -s "https://bazaar.abuse.ch/export/txt/md5/recent/" >> temp_sigs.txt
+          # 2. Fetch sources (using -L to follow web redirects cleanly)
+          curl -sL "https://bazaar.abuse.ch/export/txt/md5/recent/" >> temp_sigs.txt || true
+          curl -sL "https://raw.githubusercontent.com/stamparm/maltrail/master/trails/static/malware/md5.txt" >> temp_sigs.txt || true
+          curl -sL "https://raw.githubusercontent.com/romainmarcoux/malicious-hash/main/full-hash-md5-aa.txt" >> temp_sigs.txt || true
+          curl -sL "https://raw.githubusercontent.com/xme/signature-base/master/iocs/hash-md5.txt" >> temp_sigs.txt || true
 
-          # Source 2: Maltrail Public MD5 Malware Database
-          curl -s "https://raw.githubusercontent.com/stamparm/maltrail/master/trails/static/malware/md5.txt" >> temp_sigs.txt
-
-          # Source 3: Romain Marcoux Malicious Hash List (MD5 Part A)
-          curl -s "https://raw.githubusercontent.com/romainmarcoux/malicious-hash/main/full-hash-md5-aa.txt" >> temp_sigs.txt
-
-          # Source 4: Signature-Base Public MD5 IOCs
-          curl -s "https://raw.githubusercontent.com/xme/signature-base/master/iocs/hash-md5.txt" >> temp_sigs.txt
-
-          # 2. Add explicit EICAR test hashes
+          # 3. Always preserve EICAR test signatures
           echo "44d88612fea8a8f36de82e1278abb02f" >> temp_sigs.txt
           echo "69630e4574ec6798239b091cda43dca0" >> temp_sigs.txt
 
-          # 3. Clean up formatting: lowercase all text, extract valid 32-char MD5s, sort & remove duplicates
-          tr '[:upper:]' '[:lower:]' < temp_sigs.txt | grep -E '^[a-f0-9]{32}$' | sort -u > Signatures.txt
+          # 4. Filter 32-char MD5s, lowercase, sort & deduplicate
+          tr '[:upper:]' '[:lower:]' < temp_sigs.txt | grep -E '^[a-f0-9]{32}$' | sort -u > Signatures.txt || true
 
-          # 4. Remove workspace file
-          rm temp_sigs.txt
+          # 5. Clean up temporary file
+          rm -f temp_sigs.txt
 
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
           git add Signatures.txt
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Hourly multi-feed signature refresh" && git push)
+
+          # Safe commit check: only push if Signatures.txt actually changed
+          if ! git diff --staged --quiet; then
+            git commit -m "Hourly multi-feed signature refresh"
+            git push
+          else
+            echo "No signature updates detected. Skipping commit."
+          fi
