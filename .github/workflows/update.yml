@@ -3,7 +3,7 @@ name: Hourly Public Feed Sync
 on:
   schedule:
     - cron: '0 * * * *'  # Runs automatically every hour
-  workflow_dispatch:      # Allows manual trigger anytime
+  workflow_dispatch:      # Allows manual trigger anytime from GitHub UI
 
 permissions:
   contents: write
@@ -68,13 +68,14 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Pull latest remote changes first to prevent push conflicts
-          git pull --rebase origin main || true
-          
           git add Signatures.txt
-          
+
           if ! git diff --staged --quiet; then
             git commit -m "Hourly multi-feed signature refresh"
+            
+            # Fetch remote changes first to avoid rejected push conflicts
+            git pull --rebase origin main
+            
             git push
           else
             echo "No signature updates detected. Skipping commit."
