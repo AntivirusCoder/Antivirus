@@ -29,18 +29,21 @@ jobs:
           import json
           import re
 
-          md5_pattern = re.compile(r'^[a-fA-F0-9]{32}$')
+          # Matches both MD5 (32 hex) and SHA-256 (64 hex)
+          hash_pattern = re.compile(r'^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{64}$')
           hashes = set()
 
-          # Hardcode EICAR test hashes
+          # Hardcode EICAR test hashes (MD5 & SHA-256)
           hashes.add('44d88612fea8a8f36de82e1278abb02f')
           hashes.add('69630e4574ec6798239b091cda43dca0')
+          hashes.add('131f95c51fb29da70814e6a0b841764a8ac563ae71f502c3c3a09a6efd2636a8')
 
           headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
 
-          # 1. Fetch Text-based Feeds
+          # 1. Fetch Text-based MD5 and SHA-256 Feeds
           text_urls = [
               'https://bazaar.abuse.ch/export/txt/md5/recent/',
+              'https://bazaar.abuse.ch/export/txt/sha256/recent/',
               'https://raw.githubusercontent.com/romainmarcoux/malicious-hash/main/full-hash-md5-aa.txt'
           ]
 
@@ -51,12 +54,12 @@ jobs:
                       content = resp.read().decode('utf-8', errors='ignore')
                       for line in content.splitlines():
                           line = line.strip().lower()
-                          if md5_pattern.match(line):
+                          if hash_pattern.match(line):
                               hashes.add(line)
               except Exception as e:
                   print(f'Warning: Feed unreachable ({url}): {e}')
 
-          # 2. Fetch Abuse.ch ThreatFox Live API Feed
+          # 2. Fetch Abuse.ch ThreatFox Live API Feed (Extracts MD5 & SHA-256)
           try:
               threatfox_url = 'https://threatfox.abuse.ch/export/json/recent/'
               req = urllib.request.Request(threatfox_url, headers=headers)
@@ -66,14 +69,14 @@ jobs:
                       if isinstance(entries, list):
                           for entry in entries:
                               ioc = entry.get('ioc', '').strip().lower()
-                              if md5_pattern.match(ioc):
+                              if hash_pattern.match(ioc):
                                   hashes.add(ioc)
           except Exception as e:
               print(f'Warning: ThreatFox feed unreachable: {e}')
 
-          print(f'Total valid hashes collected: {len(hashes)}')
+          print(f'Total valid MD5 & SHA-256 hashes collected: {len(hashes)}')
 
-          if len(hashes) > 2:
+          if len(hashes) > 3:
               with open('Signatures.txt', 'w') as f:
                   for h in sorted(hashes):
                       f.write(h + '\n')
@@ -82,5 +85,5 @@ jobs:
       - name: Commit and push updated signatures
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Hourly multi-feed signature refresh"
+          commit_message: "Hourly multi-feed signature refresh (MD5 + SHA-256)"
           file_pattern: "Signatures.txt"
