@@ -29,16 +29,12 @@ jobs:
           import re
 
           urls = [
-              # Primary Active Threat Feeds
+              # Abuse.ch MalwareBazaar (Active recent hashes)
               'https://bazaar.abuse.ch/export/txt/md5/recent/',
-              'https://raw.githubusercontent.com/stamparm/maltrail/master/trails/static/malware/md5.txt',
+              # Romain Marcoux Malicious Hash Collection
               'https://raw.githubusercontent.com/romainmarcoux/malicious-hash/main/full-hash-md5-aa.txt',
-              'https://raw.githubusercontent.com/xme/signature-base/master/iocs/hash-md5.txt',
-              
-              # Expanded Community Feeds
-              'https://raw.githubusercontent.com/duggytuxy/malicious-hashes/main/md5.txt',
-              'https://raw.githubusercontent.com/cyber-threat-intelligence/malware-hashes/main/md5.txt',
-              'https://raw.githubusercontent.com/Minishlink/malicious-hashes/main/hashes.txt'
+              # Neo23x0 Signature Base IOCs
+              'https://raw.githubusercontent.com/Neo23x0/signature-base/master/iocs/hash-md5.txt'
           ]
 
           md5_pattern = re.compile(r'^[a-fA-F0-9]{32}$')
