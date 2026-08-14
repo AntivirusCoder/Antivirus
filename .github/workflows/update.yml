@@ -73,8 +73,8 @@ jobs:
 
           if ! git diff --staged --quiet; then
             git commit -m "Hourly multi-feed signature refresh"
-            git pull --rebase origin main
-            git push
+            git pull origin main --rebase
+            git push origin HEAD:main
           else
             echo "No changes detected."
           fi
