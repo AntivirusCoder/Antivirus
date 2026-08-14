@@ -31,10 +31,10 @@ jobs:
           urls = [
               # Abuse.ch MalwareBazaar (Active recent hashes)
               'https://bazaar.abuse.ch/export/txt/md5/recent/',
-              # Romain Marcoux Malicious Hash Collection
+              # Romain Marcoux Malicious Hash Collection (Parts AA, AB, AC)
               'https://raw.githubusercontent.com/romainmarcoux/malicious-hash/main/full-hash-md5-aa.txt',
-              # Neo23x0 Signature Base IOCs
-              'https://raw.githubusercontent.com/Neo23x0/signature-base/master/iocs/hash-md5.txt'
+              'https://raw.githubusercontent.com/romainmarcoux/malicious-hash/main/full-hash-md5-ab.txt',
+              'https://raw.githubusercontent.com/romainmarcoux/malicious-hash/main/full-hash-md5-ac.txt'
           ]
 
           md5_pattern = re.compile(r'^[a-fA-F0-9]{32}$')
@@ -49,7 +49,7 @@ jobs:
           for url in urls:
               try:
                   req = urllib.request.Request(url, headers=headers)
-                  with urllib.request.urlopen(req, timeout=12) as resp:
+                  with urllib.request.urlopen(req, timeout=15) as resp:
                       content = resp.read().decode('utf-8', errors='ignore')
                       for line in content.splitlines():
                           line = line.strip().lower()
