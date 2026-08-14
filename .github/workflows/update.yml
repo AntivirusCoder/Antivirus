@@ -29,10 +29,16 @@ jobs:
           import re
 
           urls = [
+              # Primary Active Threat Feeds
               'https://bazaar.abuse.ch/export/txt/md5/recent/',
               'https://raw.githubusercontent.com/stamparm/maltrail/master/trails/static/malware/md5.txt',
               'https://raw.githubusercontent.com/romainmarcoux/malicious-hash/main/full-hash-md5-aa.txt',
-              'https://raw.githubusercontent.com/xme/signature-base/master/iocs/hash-md5.txt'
+              'https://raw.githubusercontent.com/xme/signature-base/master/iocs/hash-md5.txt',
+              
+              # Expanded Community Feeds
+              'https://raw.githubusercontent.com/duggytuxy/malicious-hashes/main/md5.txt',
+              'https://raw.githubusercontent.com/cyber-threat-intelligence/malware-hashes/main/md5.txt',
+              'https://raw.githubusercontent.com/Minishlink/malicious-hashes/main/hashes.txt'
           ]
 
           md5_pattern = re.compile(r'^[a-fA-F0-9]{32}$')
@@ -47,7 +53,7 @@ jobs:
           for url in urls:
               try:
                   req = urllib.request.Request(url, headers=headers)
-                  with urllib.request.urlopen(req, timeout=10) as resp:
+                  with urllib.request.urlopen(req, timeout=12) as resp:
                       content = resp.read().decode('utf-8', errors='ignore')
                       for line in content.splitlines():
                           line = line.strip().lower()
@@ -64,17 +70,8 @@ jobs:
                       f.write(h + '\n')
           "
 
-      - name: Commit and push changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          git add Signatures.txt
-
-          if ! git diff --staged --quiet; then
-            git commit -m "Hourly multi-feed signature refresh"
-            git pull origin main --rebase
-            git push origin HEAD:main
-          else
-            echo "No changes detected."
-          fi
+      - name: Commit and push updated signatures
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Hourly multi-feed signature refresh"
+          file_pattern: "Signatures.txt"
