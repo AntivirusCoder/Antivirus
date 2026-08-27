@@ -28,10 +28,23 @@ jobs:
           import urllib.request
           import json
           import re
+          import os
 
           # Matches both MD5 (32 hex) and SHA-256 (64 hex)
           hash_pattern = re.compile(r'^[a-fA-F0-9]{32}$|^[a-fA-F0-9]{64}$')
           hashes = set()
+
+          # 0. Load existing signatures first so historical hashes are retained
+          if os.path.exists('Signatures.txt'):
+              try:
+                  with open('Signatures.txt', 'r') as f:
+                      for line in f:
+                          line = line.strip().lower()
+                          if hash_pattern.match(line):
+                              hashes.add(line)
+                  print(f'Loaded {len(hashes)} existing hashes from Signatures.txt')
+              except Exception as e:
+                  print(f'Warning: Could not read existing Signatures.txt: {e}')
 
           # Hardcode EICAR test hashes (MD5 & SHA-256)
           hashes.add('44d88612fea8a8f36de82e1278abb02f')
@@ -74,9 +87,9 @@ jobs:
           except Exception as e:
               print(f'Warning: ThreatFox feed unreachable: {e}')
 
-          print(f'Total valid MD5 & SHA-256 hashes collected: {len(hashes)}')
+          print(f'Total valid MD5 & SHA-256 hashes stored: {len(hashes)}')
 
-          if len(hashes) > 3:
+          if len(hashes) > 0:
               with open('Signatures.txt', 'w') as f:
                   for h in sorted(hashes):
                       f.write(h + '\n')
